@@ -1,0 +1,3 @@
+[submodule "dist/jl-profile"]
+	path = dist/jl-profile
+	url = git@github.com:pfitzseb/jl-profile.js.git
