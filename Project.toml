@@ -10,7 +10,8 @@ Profile = "9abbd945-dff8-562f-b5e8-e1ebf5ef1b79"
 REPL = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 
 [compat]
-JSON = "0.21"
+JSON = "0.20, 0.21"
+FlameGraphs = "0.2"
 julia = "1"
 
 [extras]
