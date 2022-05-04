@@ -1,0 +1,6 @@
+[jlprofilecanvas]
+git-tree-sha1 = "f9b1044225ca85ae8bee23bece7367b145728541"
+
+    [[jlprofilecanvas.download]]
+    sha256 = "c62214a5db9746dfab85c2a810508edbc085d497750f048158531c2fb1810010"
+    url = "https://github.com/pfitzseb/jl-profile.js/archive/refs/tags/v0.3.1.tar.gz"

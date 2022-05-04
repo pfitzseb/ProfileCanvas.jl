@@ -1,6 +1,8 @@
 module ProfileCanvas
 
-using FlameGraphs, Profile, JSON, REPL
+using FlameGraphs, Profile, JSON, REPL, Pkg.Artifacts
+
+export @profview
 
 struct ProfileData
     data
@@ -24,12 +26,13 @@ end
 function Base.show(io::IO, ::MIME"text/html", canvas::ProfileData; full = false)
     id = "profiler-container-$(round(Int, rand()*100000))"
 
+    rootpath = artifact"jlprofilecanvas"
+    path = joinpath(rootpath, "dist", "profile-viewer.js")
+
     println(io, """
     <div id="$(id)" style="height: 400px; position: relative;"></div>
     <script type="text/javascript">
-        $(
-            replace(read(joinpath(@__DIR__, "..", "dist", "jl-profile", "dist", "profile-viewer.js"), String), "export class" => "class")
-        )
+        $(replace(read(path, String), "export class" => "class"))
         const viewer = new ProfileViewer("#$(id)", $(JSON.json(canvas.data)))
     </script>
     """)
