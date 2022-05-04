@@ -27,7 +27,7 @@ function Base.show(io::IO, ::MIME"text/html", canvas::ProfileData; full = false)
     id = "profiler-container-$(round(Int, rand()*100000))"
 
     rootpath = artifact"jlprofilecanvas"
-    path = joinpath(rootpath, "dist", "profile-viewer.js")
+    path = joinpath(rootpath, "jl-profile.js-0.3.1", "dist", "profile-viewer.js")
 
     println(io, """
     <div id="$(id)" style="height: 400px; position: relative;"></div>
