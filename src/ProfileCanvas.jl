@@ -39,7 +39,10 @@ function Base.show(io::IO, ::MIME"text/html", canvas::ProfileData; full = false)
 end
 
 function Base.display(d::ProfileDisplay, canvas::ProfileData)
-    file = tempname()*".html"
+    rootpath = artifact"jlprofilecanvas"
+    path = joinpath(rootpath, "jl-profile.js-0.3.1", "dist", "profile-viewer.js")
+        
+    file = string(tempname(), ".html")
     open(file, "w") do io
         id = "profiler-container-$(round(Int, rand()*100000))"
 
@@ -63,9 +66,7 @@ function Base.display(d::ProfileDisplay, canvas::ProfileData)
         <body>
             <div id="$(id)"></div>
             <script type="text/javascript">
-                $(
-                    replace(read(joinpath(@__DIR__, "..", "dist", "jl-profile", "dist", "profile-viewer.js"), String), "export class" => "class")
-                )
+                $(replace(read(path, String), "export class" => "class"))
                 const viewer = new ProfileViewer("#$(id)", $(JSON.json(canvas.data)))
             </script>
         </body>
