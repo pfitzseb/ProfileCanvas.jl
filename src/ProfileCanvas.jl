@@ -23,7 +23,7 @@ function __init__()
     )
 end
 
-function Base.show(io::IO, ::MIME"text/html", canvas::ProfileData; full = false)
+function Base.show(io::IO, ::MIME"text/html", canvas::ProfileData)
     id = "profiler-container-$(round(Int, rand()*100000))"
 
     rootpath = artifact"jlprofilecanvas"
@@ -38,10 +38,10 @@ function Base.show(io::IO, ::MIME"text/html", canvas::ProfileData; full = false)
     """)
 end
 
-function Base.display(d::ProfileDisplay, canvas::ProfileData)
+function Base.display(_::ProfileDisplay, canvas::ProfileData)
     rootpath = artifact"jlprofilecanvas"
     path = joinpath(rootpath, "jl-profile.js-0.3.1", "dist", "profile-viewer.js")
-        
+
     file = string(tempname(), ".html")
     open(file, "w") do io
         id = "profiler-container-$(round(Int, rand()*100000))"
@@ -56,6 +56,7 @@ function Base.display(d::ProfileDisplay, canvas::ProfileData)
                 width: 100vw;
                 height: 100vh;
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+                overflow: hidden;
             }
             body {
                 margin: 0;
@@ -84,27 +85,26 @@ function Base.display(d::ProfileDisplay, canvas::ProfileData)
     end
 end
 
+"""
+    view(data = Profile.fetch(), lidict = Profile.getdict(unique(data)); C = false)
 
-function view_profile(; C = false, kwargs...)
+View profiling results in `data`/`lidict`. Simply call `ProfileCanvas.view()` to show the
+current trace.
+"""
+function view(data = Profile.fetch(), lidict = Profile.getdict(unique(data)); C = false, kwargs...)
     d = Dict()
 
-    data = Profile.fetch()
-    lidict = Profile.getdict(unique(data))
     data_u64 = convert(Vector{UInt64}, data)
 
     if VERSION >= v"1.8.0-DEV.460"
-        threads = ["all", 1:Threads.nthreads()...]
         for thread in ["all", 1:Threads.nthreads()...]
-            if thread == "all"
-                thread = 1:Threads.nthreads()
-            end
-            d[thread] = tojson(FlameGraphs.flamegraph(data_u64; lidict=lidict, C=C, threads = thread))
+            d[thread] = tojson(FlameGraphs.flamegraph(data_u64; lidict=lidict, C=C, threads = thread == "all" ? (1:Threads.nthreads()) : thread))
         end
     else
         d["all"] = tojson(FlameGraphs.flamegraph(data_u64; lidict=lidict, C=C))
     end
 
-    ProfileData(d)
+    return ProfileData(d)
 end
 
 function tojson(node, root = false)
@@ -124,13 +124,15 @@ end
 """
     @profview f(args...) [C = false]
 
-Clear the Profile buffer, profile `f(args...)`, and view the result graphically.
+Clear the Profile buffer, profile `f(args...)`, and view the collected profiling data.
+
+The optional `C` keyword argument controls whether functions in C code are displayed.
 """
 macro profview(ex, args...)
     return quote
         Profile.clear()
         Profile.@profile $(esc(ex))
-        view_profile(; $(esc.(args)...))
+        view(; $(esc.(args)...))
     end
 end
 
