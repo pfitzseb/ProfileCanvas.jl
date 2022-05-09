@@ -1,4 +1,4 @@
-# ProfileCanvas [![CI](https://github.com/pfitzseb/ProfileCanvas.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/pfitzseb/ProfileCanvas.jl/actions/workflows/CI.yml)
+# ProfileCanvas [![CI](https://github.com/pfitzseb/ProfileCanvas.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/pfitzseb/ProfileCanvas.jl/actions/workflows/CI.yml) [![version](https://juliahub.com/docs/ProfileCanvas/version.svg)](https://juliahub.com/ui/Packages/ProfileCanvas/T2dXl)
 
 This package is intended as a drop-in replacement for [ProfileView.jl](https://github.com/timholy/ProfileView.jl) and [ProfileSVG.jl](https://github.com/kimikage/ProfileSVG.jl).
 
