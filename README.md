@@ -1,6 +1,6 @@
-# ProfileCanvas
+# ProfileCanvas [![CI](https://github.com/pfitzseb/ProfileCanvas.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/pfitzseb/ProfileCanvas.jl/actions/workflows/CI.yml) [![version](https://juliahub.com/docs/ProfileCanvas/version.svg)](https://juliahub.com/ui/Packages/ProfileCanvas/T2dXl)
 
-This package is intended as a drop-in replacement for [ProfileView.jl](https://github.com/timholy/ProfileView.jl) and [ProfileSVG.jl](https://github.com/kimikage/ProfileSVG.jl). It
+This package is intended as a drop-in replacement for [ProfileView.jl](https://github.com/timholy/ProfileView.jl) and [ProfileSVG.jl](https://github.com/kimikage/ProfileSVG.jl).
 
 It exposes the HTML canvas based [profile viewer UI](https://github.com/pfitzseb/jl-profile.js) used by the [Julia extension for VS Code](https://www.julia-vscode.org/docs/stable/userguide/profiler/) in the REPL and environments that can display HTML (like Pluto notebooks). Performance should be significantly better than SVG-based solutions, especially for very large traces.
 
