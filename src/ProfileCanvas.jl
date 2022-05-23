@@ -2,7 +2,7 @@ module ProfileCanvas
 
 using Profile, JSON, REPL, Pkg.Artifacts
 
-export @profview, @profview_allocs, view, view_allocs
+export @profview, @profview_allocs
 
 struct ProfileData
     data
