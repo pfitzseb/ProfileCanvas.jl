@@ -1,11 +1,24 @@
 module ProfileCanvas
 
-using FlameGraphs, Profile, JSON, REPL, Pkg.Artifacts
+using Profile, JSON, REPL, Pkg.Artifacts
 
-export @profview
+export @profview, @profview_allocs, view, view_allocs
 
 struct ProfileData
     data
+    typ
+end
+
+mutable struct ProfileFrame
+    func::String
+    file::String # human readable file name
+    path::String # absolute path
+    line::Int # 1-based line number
+    count::Int # number of samples in this frame
+    countLabel::Union{Missing,String} # defaults to `$count samples`
+    flags::UInt8 # any or all of ProfileFrameFlag
+    taskId::Union{Missing,UInt}
+    children::Vector{ProfileFrame}
 end
 
 struct ProfileDisplay <: Base.Multimedia.AbstractDisplay end
@@ -27,20 +40,20 @@ function Base.show(io::IO, ::MIME"text/html", canvas::ProfileData)
     id = "profiler-container-$(round(Int, rand()*100000))"
 
     rootpath = artifact"jlprofilecanvas"
-    path = joinpath(rootpath, "jl-profile.js-0.3.1", "dist", "profile-viewer.js")
+    path = joinpath(rootpath, "jl-profile.js-0.4.1", "dist", "profile-viewer.js")
 
     println(io, """
     <div id="$(id)" style="height: 400px; position: relative;"></div>
     <script type="text/javascript">
         $(replace(read(path, String), "export class" => "class"))
-        const viewer = new ProfileViewer("#$(id)", $(JSON.json(canvas.data)))
+        const viewer = new ProfileViewer("#$(id)", $(JSON.json(canvas.data)), "$(canvas.typ)")
     </script>
     """)
 end
 
 function Base.display(_::ProfileDisplay, canvas::ProfileData)
     rootpath = artifact"jlprofilecanvas"
-    path = joinpath(rootpath, "jl-profile.js-0.3.1", "dist", "profile-viewer.js")
+    path = joinpath(rootpath, "jl-profile.js-0.4.1", "dist", "profile-viewer.js")
 
     file = string(tempname(), ".html")
     open(file, "w") do io
@@ -68,7 +81,7 @@ function Base.display(_::ProfileDisplay, canvas::ProfileData)
             <div id="$(id)"></div>
             <script type="text/javascript">
                 $(replace(read(path, String), "export class" => "class"))
-                const viewer = new ProfileViewer("#$(id)", $(JSON.json(canvas.data)))
+                const viewer = new ProfileViewer("#$(id)", $(JSON.json(canvas.data)), "$(canvas.typ)")
             </script>
         </body>
         </html>
@@ -84,49 +97,135 @@ function Base.display(_::ProfileDisplay, canvas::ProfileData)
         run(`xdg-open $url`)
     end
 end
+using Profile
 
-"""
-    view(data = Profile.fetch(), lidict = Profile.getdict(unique(data)); C = false)
+# https://github.com/timholy/FlameGraphs.jl/blob/master/src/graph.jl
+const ProfileFrameFlag = (
+    RuntimeDispatch = UInt8(2^0),
+    GCEvent = UInt8(2^1),
+    REPL = UInt8(2^2),
+    Compilation = UInt8(2^3),
+    TaskEvent = UInt8(2^4)
+)
 
-View profiling results in `data`/`lidict`. Simply call `ProfileCanvas.view()` to show the
-current trace.
-"""
-function view(data = Profile.fetch(), lidict = Profile.getdict(unique(data)); C = false, kwargs...)
-    d = Dict()
-
-    data_u64 = convert(Vector{UInt64}, data)
+function view(data = Profile.fetch(); C=false, kwargs...)
+    d = Dict{String, ProfileFrame}()
 
     if VERSION >= v"1.8.0-DEV.460"
-        for thread in ["all", 1:Threads.nthreads()...]
-            d[thread] = tojson(FlameGraphs.flamegraph(data_u64; lidict=lidict, C=C, threads = thread == "all" ? (1:Threads.nthreads()) : thread))
-        end
+        threads = ["all", 1:Threads.nthreads()...]
     else
-        d["all"] = tojson(FlameGraphs.flamegraph(data_u64; lidict=lidict, C=C))
+        threads = ["all"]
     end
 
-    return ProfileData(d)
+    if isempty(data)
+        Profile.warning_empty()
+        return
+    end
+
+    lidict = Profile.getdict(unique(data))
+    data_u64 = convert(Vector{UInt64}, data)
+    for thread in threads
+        graph = stackframetree(data_u64, lidict; thread=thread, kwargs...)
+        d[string(thread)] = make_tree(
+            ProfileFrame(
+                "root", "", "", 0, graph.count, missing, 0x0, missing, ProfileFrame[]
+            ), graph; C=C, kwargs...)
+    end
+
+    return ProfileData(d, "Thread")
 end
 
-function tojson(node, root = false)
-    name = string(node.data.sf.file)
+function stackframetree(data_u64, lidict; thread=nothing, combine=true, recur=:off)
+    root = combine ? Profile.StackFrameTree{StackTraces.StackFrame}() : Profile.StackFrameTree{UInt64}()
+    if VERSION >= v"1.8.0-DEV.460"
+        thread = thread == "all" ? (1:Threads.nthreads()) : thread
+        root, _ = Profile.tree!(root, data_u64, lidict, true, recur, thread)
+    else
+        root = Profile.tree!(root, data_u64, lidict, true, recur)
+    end
+    if !isempty(root.down)
+        root.count = sum(pr -> pr.second.count, root.down)
+    end
 
-    return Dict(
-        :func => node.data.sf.func,
-        :file => basename(name),
-        :path => name,
-        :line => node.data.sf.line,
-        :count => root ? sum(length(c.data.span) for c in node) : length(node.data.span),
-        :flags => node.data.status,
-        :children => [tojson(c) for c in node]
+    return root
+end
+
+function status(sf::StackTraces.StackFrame)
+    st = UInt8(0)
+    if sf.from_c && (sf.func === :jl_invoke || sf.func === :jl_apply_generic || sf.func === :ijl_apply_generic)
+        st |= ProfileFrameFlag.RuntimeDispatch
+    end
+    if sf.from_c && startswith(String(sf.func), "jl_gc_")
+        st |= ProfileFrameFlag.GCEvent
+    end
+    if !sf.from_c && sf.func === :eval_user_input && endswith(String(sf.file), "REPL.jl")
+        st |= ProfileFrameFlag.REPL
+    end
+    if !sf.from_c && occursin("./compiler/", String(sf.file))
+        st |= ProfileFrameFlag.Compilation
+    end
+    if !sf.from_c && occursin("task.jl", String(sf.file))
+        st |= ProfileFrameFlag.TaskEvent
+    end
+    return st
+end
+
+function status(node::Profile.StackFrameTree, C::Bool)
+    st = status(node.frame)
+    C && return st
+    # If we're suppressing C frames, check all C-frame children
+    for child in values(node.down)
+        child.frame.from_c || continue
+        st |= status(child, C)
+    end
+    return st
+end
+
+function add_child(graph::ProfileFrame, node, C::Bool)
+    name = string(node.frame.file)
+    func = String(node.frame.func)
+
+    if func == ""
+        func = "unknown"
+    end
+
+    frame = ProfileFrame(
+        func,
+        basename(name),
+        name,
+        node.frame.line,
+        node.count,
+        missing,
+        status(node, C),
+        missing,
+        ProfileFrame[]
     )
+
+    push!(graph.children, frame)
+
+    return frame
+end
+
+function make_tree(graph, node::Profile.StackFrameTree; C=false)
+    for child_node in sort!(collect(values(node.down)); rev=true, by=node -> node.count)
+        # child not a hidden frame
+        if C || !child_node.frame.from_c
+            child = add_child(graph, child_node, C)
+            make_tree(child, child_node; C=C)
+        else
+            make_tree(graph, child_node)
+        end
+    end
+
+    return graph
 end
 
 """
     @profview f(args...) [C = false]
 
-Clear the Profile buffer, profile `f(args...)`, and view the collected profiling data.
+Clear the Profile buffer, profile `f(args...)`, and view the result graphically.
 
-The optional `C` keyword argument controls whether functions in C code are displayed.
+The default of `C = false` will only show Julia frames in the profile graph.
 """
 macro profview(ex, args...)
     return quote
@@ -134,6 +233,110 @@ macro profview(ex, args...)
         Profile.@profile $(esc(ex))
         view(; $(esc.(args)...))
     end
+end
+
+## Allocs
+
+"""
+    @profview_allocs f(args...) [sample_rate=0.0001] [C=false]
+
+Clear the Profile buffer, profile `f(args...)`, and view the result graphically.
+"""
+macro profview_allocs(ex, args...)
+    sample_rate_expr = :(sample_rate=0.0001)
+    for arg in args
+        if Meta.isexpr(arg, :(=)) && length(arg.args) > 0 && arg.args[1] === :sample_rate
+            sample_rate_expr = arg
+        end
+    end
+    if isdefined(Profile, :Allocs)
+        return quote
+            Profile.Allocs.clear()
+            Profile.Allocs.@profile $(esc(sample_rate_expr)) $(esc(ex))
+            view_allocs()
+        end
+    else
+        return :(@error "This version of Julia does not support the allocation profiler.")
+    end
+end
+
+function view_allocs(_results=Profile.Allocs.fetch(); C=false)
+    results = _results::Profile.Allocs.AllocResults
+    allocs = results.allocs
+
+    allocs_root = ProfileFrame("root", "", "", 0, 0, missing, 0x0, missing, ProfileFrame[])
+    counts_root = ProfileFrame("root", "", "", 0, 0, missing, 0x0, missing, ProfileFrame[])
+    for alloc in allocs
+        this_allocs = allocs_root
+        this_counts = counts_root
+
+        for sf in Iterators.reverse(alloc.stacktrace)
+            if !C && sf.from_c
+                continue
+            end
+            file = string(sf.file)
+            this_counts′ = ProfileFrame(
+                string(sf.func), basename(file), file,
+                sf.line, 0, missing, 0x0, missing, ProfileFrame[]
+            )
+            ind = findfirst(c -> (
+                    c.func == this_counts′.func &&
+                    c.path == this_counts′.path &&
+                    c.line == this_counts′.line
+                ), this_allocs.children)
+
+            this_counts, this_allocs = if ind === nothing
+                push!(this_counts.children, this_counts′)
+                this_allocs′ = deepcopy(this_counts′)
+                push!(this_allocs.children, this_allocs′)
+
+                (this_counts′, this_allocs′)
+            else
+                (this_counts.children[ind], this_allocs.children[ind])
+            end
+            this_allocs.count += alloc.size
+            this_allocs.countLabel = memory_size(this_allocs.count)
+            this_counts.count += 1
+        end
+
+        alloc_type = replace(string(alloc.type), "Profile.Allocs." => "")
+        ind = findfirst(c -> (c.func == alloc_type), this_allocs.children)
+        if ind === nothing
+            push!(this_allocs.children, ProfileFrame(
+                alloc_type, "", "",
+                0, this_allocs.count, memory_size(this_allocs.count), ProfileFrameFlag.GCEvent, missing, ProfileFrame[]
+            ))
+            push!(this_counts.children, ProfileFrame(
+                alloc_type, "", "",
+                0, 1, missing, ProfileFrameFlag.GCEvent, missing, ProfileFrame[]
+            ))
+        else
+            this_counts.children[ind].count += 1
+            this_allocs.children[ind].count += alloc.size
+            this_allocs.children[ind].countLabel = memory_size(this_allocs.count)
+        end
+
+        counts_root.count += 1
+        allocs_root.count += alloc.size
+        allocs_root.countLabel = memory_size(allocs_root.count)
+    end
+
+    d = Dict{String, ProfileFrame}(
+        "size" => allocs_root,
+        "count" => counts_root
+    )
+
+    return ProfileData(d, "Allocation")
+end
+
+const prefixes = ["bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
+function memory_size(size)
+    i = 1
+    while size > 1000 && i + 1 < length(prefixes)
+        size /= 1000
+        i += 1
+    end
+    return string(round(Int, size), " ", prefixes[i])
 end
 
 end
