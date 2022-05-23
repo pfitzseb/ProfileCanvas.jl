@@ -32,3 +32,5 @@ when run from the REPL and
 ![](assets/flamegraph-pluto.png)
 
 in a [Pluto](https://github.com/fonsp/Pluto.jl) notebook.
+
+On Julia 1.8 and newer you can also use the allocation profiler with `@profview_allocs`/`view_allocs`.
