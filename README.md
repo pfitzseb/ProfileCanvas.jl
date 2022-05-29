@@ -23,7 +23,9 @@ end
 @profview profile_test(1)  # run once to trigger compilation (ignore this one)
 @profview profile_test(10)
 ```
-results in
+
+The controls are _mouse wheel_ to scroll, and _click_ on a cell to base the zoom on it.
+The end result depends on the julia version, but it might be something like this:
 
 ![](assets/flamegraph.png)
 
