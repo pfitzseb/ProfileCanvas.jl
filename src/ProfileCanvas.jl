@@ -40,23 +40,23 @@ function Base.show(io::IO, ::MIME"text/html", canvas::ProfileData)
     id = "profiler-container-$(round(Int, rand()*100000))"
 
     rootpath = artifact"jlprofilecanvas"
-    path = joinpath(rootpath, "jl-profile.js-0.5.1", "dist", "profile-viewer.js")
+    path = joinpath(rootpath, "jl-profile.js-0.5.2", "dist", "profile-viewer.js")
 
     println(
         io,
         """
-<div id="$(id)" style="height: 400px; position: relative;"></div>
-<script type="module">
-    $(read(path, String))
-    const viewer = new ProfileViewer("#$(id)", $(JSON.json(canvas.data)), "$(canvas.typ)")
-</script>
-"""
+        <div id="$(id)" style="height: 400px; position: relative;"></div>
+        <script type="module">
+            $(read(path, String))
+            const viewer = new ProfileViewer("#$(id)", $(JSON.json(canvas.data)), "$(canvas.typ)")
+        </script>
+        """
     )
 end
 
 function Base.display(_::ProfileDisplay, canvas::ProfileData)
     rootpath = artifact"jlprofilecanvas"
-    path = joinpath(rootpath, "jl-profile.js-0.5.1", "dist", "profile-viewer.js")
+    path = joinpath(rootpath, "jl-profile.js-0.5.2", "dist", "profile-viewer.js")
 
     file = string(tempname(), ".html")
     open(file, "w") do io
@@ -65,32 +65,32 @@ function Base.display(_::ProfileDisplay, canvas::ProfileData)
         println(
             io,
             """
-<html>
-<head>
-<style>
-    #$(id) {
-        margin: 0;
-        padding: 0;
-        width: 100vw;
-        height: 100vh;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
-        overflow: hidden;
-    }
-    body {
-        margin: 0;
-        padding: 0;
-    }
-</style>
-</head>
-<body>
-    <div id="$(id)"></div>
-    <script type="module">
-        $(read(path, String))
-        const viewer = new ProfileViewer("#$(id)", $(JSON.json(canvas.data)), "$(canvas.typ)")
-    </script>
-</body>
-</html>
-"""
+            <html>
+            <head>
+            <style>
+                #$(id) {
+                    margin: 0;
+                    padding: 0;
+                    width: 100vw;
+                    height: 100vh;
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+                    overflow: hidden;
+                }
+                body {
+                    margin: 0;
+                    padding: 0;
+                }
+            </style>
+            </head>
+            <body>
+                <div id="$(id)"></div>
+                <script type="module">
+                    $(read(path, String))
+                    const viewer = new ProfileViewer("#$(id)", $(JSON.json(canvas.data)), "$(canvas.typ)")
+                </script>
+            </body>
+            </html>
+            """
         )
     end
     url = "file://$file"
