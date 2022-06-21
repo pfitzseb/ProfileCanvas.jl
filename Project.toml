@@ -1,7 +1,7 @@
 name = "ProfileCanvas"
 uuid = "efd6af41-a80b-495e-886c-e51b0c7d77a3"
 authors = ["Sebastian Pfitzner <pfitzseb@gmail.com> and contributors"]
-version = "0.1.1"
+version = "0.1.2"
 
 [deps]
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"

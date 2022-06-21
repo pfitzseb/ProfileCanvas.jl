@@ -40,52 +40,58 @@ function Base.show(io::IO, ::MIME"text/html", canvas::ProfileData)
     id = "profiler-container-$(round(Int, rand()*100000))"
 
     rootpath = artifact"jlprofilecanvas"
-    path = joinpath(rootpath, "jl-profile.js-0.4.1", "dist", "profile-viewer.js")
+    path = joinpath(rootpath, "jl-profile.js-0.5.1", "dist", "profile-viewer.js")
 
-    println(io, """
-    <div id="$(id)" style="height: 400px; position: relative;"></div>
-    <script type="text/javascript">
-        $(replace(read(path, String), "export class" => "class"))
-        const viewer = new ProfileViewer("#$(id)", $(JSON.json(canvas.data)), "$(canvas.typ)")
-    </script>
-    """)
+    println(
+        io,
+        """
+<div id="$(id)" style="height: 400px; position: relative;"></div>
+<script type="module">
+    $(read(path, String))
+    const viewer = new ProfileViewer("#$(id)", $(JSON.json(canvas.data)), "$(canvas.typ)")
+</script>
+"""
+    )
 end
 
 function Base.display(_::ProfileDisplay, canvas::ProfileData)
     rootpath = artifact"jlprofilecanvas"
-    path = joinpath(rootpath, "jl-profile.js-0.4.1", "dist", "profile-viewer.js")
+    path = joinpath(rootpath, "jl-profile.js-0.5.1", "dist", "profile-viewer.js")
 
     file = string(tempname(), ".html")
     open(file, "w") do io
         id = "profiler-container-$(round(Int, rand()*100000))"
 
-        println(io, """
-        <html>
-        <head>
-        <style>
-            #$(id) {
-                margin: 0;
-                padding: 0;
-                width: 100vw;
-                height: 100vh;
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
-                overflow: hidden;
-            }
-            body {
-                margin: 0;
-                padding: 0;
-            }
-        </style>
-        </head>
-        <body>
-            <div id="$(id)"></div>
-            <script type="text/javascript">
-                $(replace(read(path, String), "export class" => "class"))
-                const viewer = new ProfileViewer("#$(id)", $(JSON.json(canvas.data)), "$(canvas.typ)")
-            </script>
-        </body>
-        </html>
-        """)
+        println(
+            io,
+            """
+<html>
+<head>
+<style>
+    #$(id) {
+        margin: 0;
+        padding: 0;
+        width: 100vw;
+        height: 100vh;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+        overflow: hidden;
+    }
+    body {
+        margin: 0;
+        padding: 0;
+    }
+</style>
+</head>
+<body>
+    <div id="$(id)"></div>
+    <script type="module">
+        $(read(path, String))
+        const viewer = new ProfileViewer("#$(id)", $(JSON.json(canvas.data)), "$(canvas.typ)")
+    </script>
+</body>
+</html>
+"""
+        )
     end
     url = "file://$file"
 
@@ -101,15 +107,15 @@ using Profile
 
 # https://github.com/timholy/FlameGraphs.jl/blob/master/src/graph.jl
 const ProfileFrameFlag = (
-    RuntimeDispatch = UInt8(2^0),
-    GCEvent = UInt8(2^1),
-    REPL = UInt8(2^2),
-    Compilation = UInt8(2^3),
-    TaskEvent = UInt8(2^4)
+    RuntimeDispatch=UInt8(2^0),
+    GCEvent=UInt8(2^1),
+    REPL=UInt8(2^2),
+    Compilation=UInt8(2^3),
+    TaskEvent=UInt8(2^4)
 )
 
-function view(data = Profile.fetch(); C=false, kwargs...)
-    d = Dict{String, ProfileFrame}()
+function view(data=Profile.fetch(); C=false, kwargs...)
+    d = Dict{String,ProfileFrame}()
 
     if VERSION >= v"1.8.0-DEV.460"
         threads = ["all", 1:Threads.nthreads()...]
@@ -243,7 +249,7 @@ end
 Clear the Profile buffer, profile `f(args...)`, and view the result graphically.
 """
 macro profview_allocs(ex, args...)
-    sample_rate_expr = :(sample_rate=0.0001)
+    sample_rate_expr = :(sample_rate = 0.0001)
     for arg in args
         if Meta.isexpr(arg, :(=)) && length(arg.args) > 0 && arg.args[1] === :sample_rate
             sample_rate_expr = arg
@@ -321,7 +327,7 @@ function view_allocs(_results=Profile.Allocs.fetch(); C=false)
         allocs_root.countLabel = memory_size(allocs_root.count)
     end
 
-    d = Dict{String, ProfileFrame}(
+    d = Dict{String,ProfileFrame}(
         "size" => allocs_root,
         "count" => counts_root
     )
