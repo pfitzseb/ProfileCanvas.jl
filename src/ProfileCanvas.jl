@@ -1,6 +1,6 @@
 module ProfileCanvas
 
-using Profile, JSON, REPL, Pkg.Artifacts
+using Profile, JSON, REPL, Pkg.Artifacts, Base64
 
 export @profview, @profview_allocs
 
@@ -36,19 +36,23 @@ function __init__()
     )
 end
 
+function jlprofile_data_uri()
+    path = joinpath(artifact"jlprofilecanvas", "jl-profile.js-0.5.2", "dist", "profile-viewer.js")
+    str = read(path, String)
+
+    return string("data:text/javascript;base64,", base64encode(str))
+end
+
 function Base.show(io::IO, ::MIME"text/html", canvas::ProfileData)
     id = "profiler-container-$(round(Int, rand()*100000))"
-
-    rootpath = artifact"jlprofilecanvas"
-    path = joinpath(rootpath, "jl-profile.js-0.5.2", "dist", "profile-viewer.js")
 
     println(
         io,
         """
         <div id="$(id)" style="height: 400px; position: relative;"></div>
         <script type="module">
-            $(read(path, String))
-            const viewer = new ProfileViewer("#$(id)", $(JSON.json(canvas.data)), "$(canvas.typ)")
+            const ProfileCanvas = await import('$(jlprofile_data_uri())')
+            const viewer = new ProfileCanvas.ProfileViewer("#$(id)", $(JSON.json(canvas.data)), "$(canvas.typ)")
         </script>
         """
     )
@@ -85,8 +89,8 @@ function Base.display(_::ProfileDisplay, canvas::ProfileData)
             <body>
                 <div id="$(id)"></div>
                 <script type="module">
-                    $(read(path, String))
-                    const viewer = new ProfileViewer("#$(id)", $(JSON.json(canvas.data)), "$(canvas.typ)")
+                    const ProfileCanvas = await import('$(jlprofile_data_uri())')
+                    const viewer = new ProfileCanvas.ProfileViewer("#$(id)", $(JSON.json(canvas.data)), "$(canvas.typ)")
                 </script>
             </body>
             </html>
