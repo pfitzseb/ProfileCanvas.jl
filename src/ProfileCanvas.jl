@@ -62,7 +62,22 @@ function Base.display(_::ProfileDisplay, canvas::ProfileData)
     rootpath = artifact"jlprofilecanvas"
     path = joinpath(rootpath, "jl-profile.js-0.5.2", "dist", "profile-viewer.js")
 
-    file = string(tempname(), ".html")
+    file = html_file(string(tempname(), ".html"), canvas)
+    url = "file://$file"
+
+    if Sys.iswindows()
+        run(`cmd /c "start $url"`)
+    elseif Sys.isapple()
+        run(`open $url`)
+    elseif Sys.islinux() || Sys.isbsd()
+        run(`xdg-open $url`)
+    end
+end
+
+html_file(filename, data=Profile.fetch(); kwargs...) = html_file(filename, view(data; kwargs...))
+
+function html_file(file::AbstractString, canvas::ProfileData)
+    @assert endswith(file, ".html")
     open(file, "w") do io
         id = "profiler-container-$(round(Int, rand()*100000))"
 
@@ -97,16 +112,9 @@ function Base.display(_::ProfileDisplay, canvas::ProfileData)
             """
         )
     end
-    url = "file://$file"
-
-    if Sys.iswindows()
-        run(`cmd /c "start $url"`)
-    elseif Sys.isapple()
-        run(`open $url`)
-    elseif Sys.islinux() || Sys.isbsd()
-        run(`xdg-open $url`)
-    end
+    return file
 end
+
 using Profile
 
 # https://github.com/timholy/FlameGraphs.jl/blob/master/src/graph.jl
