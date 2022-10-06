@@ -331,7 +331,7 @@ function view_allocs(_results=Profile.Allocs.fetch(); C=false)
         else
             this_counts.children[ind].count += 1
             this_allocs.children[ind].count += alloc.size
-            this_allocs.children[ind].countLabel = memory_size(this_allocs.children[ind].countLabel)
+            this_allocs.children[ind].countLabel = memory_size(this_allocs.children[ind].count)
         end
 
         counts_root.count += 1
