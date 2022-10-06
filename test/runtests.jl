@@ -16,7 +16,7 @@ end
 @testset "ProfileCanvas.jl" begin
     trace = @profview profile_test(10)
     html = sprint(show, "text/html", trace)
-    @test occursin("const viewer = new ProfileViewer(", html)
+    @test occursin("const viewer = new ProfileCanvas.ProfileViewer(", html)
 end
 
 @testset "html file" begin
