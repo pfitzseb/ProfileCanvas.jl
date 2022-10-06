@@ -1,7 +1,7 @@
 name = "ProfileCanvas"
 uuid = "efd6af41-a80b-495e-886c-e51b0c7d77a3"
 authors = ["Sebastian Pfitzner <pfitzseb@gmail.com> and contributors"]
-version = "0.1.5"
+version = "0.1.6"
 
 [deps]
 Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
