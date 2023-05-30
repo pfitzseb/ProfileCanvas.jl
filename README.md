@@ -24,6 +24,12 @@ end
 @profview profile_test(10)
 ```
 
+On Julia 1.8 and newer you can also use profiler memory allocations with `@profview_allocs`/`view_allocs`:
+
+```
+@profview_allocs profile_test(10)
+```
+
 The controls are _mouse wheel_ to scroll, and _click_ on a cell to base the zoom on it.
 The end result depends on the julia version, but it might be something like this:
 
@@ -35,4 +41,8 @@ when run from the REPL and
 
 in a [Pluto](https://github.com/fonsp/Pluto.jl) notebook.
 
-On Julia 1.8 and newer you can also use the allocation profiler with `@profview_allocs`/`view_allocs`.
+### Color coding
+
+The profiling data is color-coded to provide insights about the performance of your code:
+- Red bars represent function calls resolved at run-time, which often have a significant impact on performance. While some red is unavoidable, excessive red may indicate a performance bottleneck.
+- Yellow bars indicate a site of garbage collection, which is often triggered by memory allocation. These sites can often be optimized by reducing the amount of temporary memory allocated by your code.

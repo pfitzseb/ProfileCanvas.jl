@@ -241,9 +241,37 @@ end
 """
     @profview f(args...) [C = false]
 
-Clear the Profile buffer, profile `f(args...)`, and view the result graphically.
+Clear the Profile buffer, profile the runtime of `f(args...)`, and view the result graphically.
 
-The default of `C = false` will only show Julia frames in the profile graph.
+The profiling data is color-coded to provide insights about the performance of your code:
+- Red bars represent function calls resolved at run-time, which often have a significant impact on performance. While some red is unavoidable, excessive red may indicate a performance bottleneck.
+- Yellow bars indicate a site of garbage collection, which is often triggered by memory allocation. These sites can often be optimized by reducing the amount of temporary memory allocated by your code.
+
+Example:
+
+```julia
+using ProfileCanvas
+function profile_test(n)
+    for i = 1:n
+        A = randn(100,100,20)
+        m = maximum(A)
+        Am = mapslices(sum, A; dims=2)
+        B = A[:,:,5]
+        Bsort = mapslices(sort, B; dims=1)
+        b = rand(100)
+        C = B.*b
+    end
+end
+
+@profview profile_test(1)  # run once to trigger compilation (ignore this one)
+@profview profile_test(10)
+```
+
+See also:
+- [`ProfileCanvas.@profview_allocs`](@ref)
+
+`C = true` will also show frames originating in C code (typically Julia internals),
+which can be helpful for advanced users.
 """
 macro profview(ex, args...)
     return quote
@@ -258,7 +286,12 @@ end
 """
     @profview_allocs f(args...) [sample_rate=0.0001] [C=false]
 
-Clear the Profile buffer, profile `f(args...)`, and view the result graphically.
+Clear the `Profile.Allocs` buffer, profile allocations during `f(args...)`, and view the result graphically.
+
+A `sample_rate` of 1.0 will record everything; 0.0 will record nothing
+
+See also:
+- [`ProfileCanvas.@profview`](@ref)
 """
 macro profview_allocs(ex, args...)
     sample_rate_expr = :(sample_rate = 0.0001)
