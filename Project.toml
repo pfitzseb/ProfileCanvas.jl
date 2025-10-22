@@ -1,7 +1,7 @@
 name = "ProfileCanvas"
 uuid = "efd6af41-a80b-495e-886c-e51b0c7d77a3"
 authors = ["Sebastian Pfitzner <pfitzseb@gmail.com> and contributors"]
-version = "0.1.6"
+version = "0.1.7"
 
 [deps]
 Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
@@ -11,7 +11,7 @@ Profile = "9abbd945-dff8-562f-b5e8-e1ebf5ef1b79"
 REPL = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 
 [compat]
-JSON = "0.20, 0.21"
+JSON = "0.20,0.21,1"
 julia = "1"
 
 [extras]
