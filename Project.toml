@@ -5,17 +5,20 @@ version = "0.1.7"
 
 [deps]
 Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
+FlameGraphs = "08572546-2f56-4bcf-ba4e-bab62c3a3f89"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+LeftChildRightSiblingTrees = "1d6d02ad-be62-4b6b-8a6d-2f90e265016e"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Profile = "9abbd945-dff8-562f-b5e8-e1ebf5ef1b79"
 REPL = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
+UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
+
+[weakdeps]
+SnoopCompile = "aa65fe97-06da-5843-b5b1-d5d13cad87d2"
+
+[extensions]
+SnoopCompileProfileCanvasExt = "SnoopCompile"
 
 [compat]
 JSON = "0.20,0.21,1"
 julia = "1"
-
-[extras]
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-
-[targets]
-test = ["Test"]
